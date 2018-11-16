@@ -91,13 +91,15 @@ func (ctx *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ID:      generateSessionID(),
 		Request: r,
 		Cookie: &HTTPCookie{
-			Secure: requestIsSecure(r, ctx.IsTrustProxy),
+			Cookie: http.Cookie{
+				Name:   "asdasd",
+				Value:  generateSessionID(),
+				Path:   "/",
+				Domain: ".claimh.loc",
+				Secure: requestIsSecure(r, ctx.IsTrustProxy),
+			},
 		},
 	})
 
 	ctx.handler.ServeHTTP(w, r)
 }
-
-// func (ctx *SessionMiddleware) () {
-
-// }

@@ -12,8 +12,13 @@ import (
  * @private
  */
 func generateSessionID() string {
-	// hash, err := openssl.NewHMAC()
-	return "h4j5hg3j45"
+	// buf := make([]byte, 12)
+	// if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+	// 	log.Fatal(err)
+	// 	return ""
+	// }
+	// return string(buf[:])
+	return ""
 }
 
 /**
