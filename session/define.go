@@ -1,60 +1,76 @@
 package session
 
 import (
+	"flag"
 	"net/http"
+	"time"
 )
 
 type ContextKey string
 type UnsetModeEnums string
 
-// FuncIDGenerator comment
-type FuncIDGenerator = func() string
-
 const SESSION_ID_CONTEXT_KEY ContextKey = "session_id"
-const DEFAULT_SESSION_NAME string = "gopher.sid"
 const UNSET_KEEP UnsetModeEnums = "keep"
 const UNSET_DESTROY UnsetModeEnums = "destroy"
+const DEFAULT_SESSION_NAME string = "gopher.sid"
+
+var DISABLE_RESAVE = flag.Bool("DISABLE_RESAVE", false, "")
+var ENABLE_RESAVE = flag.Bool("ENABLE_RESAVE", true, "")
+var DISABLE_SAVE_UNINITIALIZED = flag.Bool("DISABLE_SAVE_UNINITIALIZED", false, "")
+var ENABLE_SAVE_UNINITIALIZED = flag.Bool("ENABLE_SAVE_UNINITIALIZED", true, "")
 
 // HTTPCookie comment
 type HTTPCookie struct {
-	http.Cookie
-	// someExtraField string
-}
+	*http.Cookie
+	Name  string
+	Value string
 
-// Cookie comment
-type Cookie struct {
-	HTTPCookie
+	Path       string    // optional
+	Domain     string    // optional
+	Expires    time.Time // optional
+	RawExpires string    // for reading cookies only
+
+	// MaxAge=0 means no 'Max-Age' attribute specified.
+	// MaxAge<0 means delete cookie now, equivalently 'Max-Age: 0'
+	// MaxAge>0 means Max-Age attribute present and given in seconds
+	MaxAge   int
+	Secure   bool
+	Raw      string
+	Unparsed []string // Raw text of unparsed attribute-value pairs
 }
 
 // StoreInterface comment
 type StoreInterface interface {
+	SetSession(*Session)
 }
 
 // Store comment
 type Store struct {
 	StoreInterface
+	Session *Session
 }
 
 // Session comment
 type Session struct {
+	ID      string
 	Request *http.Request
-	Cookie  *Cookie
+	Cookie  *HTTPCookie
 }
 
 // MemoryStore comment
 type MemoryStore struct {
-	*Store
+	StoreInterface
+	Store
 }
 
 // MiddlewareOptions comment
 type MiddlewareOptions struct {
 	Cookie              *HTTPCookie                  `json:"cookie"`
-	GenIDFunction       *FuncIDGenerator             `json:"genid"`
-	Name                *string                      `json:"name"`
+	Name                string                       `json:"name"`
 	Store               *interface{ StoreInterface } `json:"store"`
-	IsProxy             *bool                        `json:"proxy"`
+	IsTrustProxy        bool                         `json:"proxy"`
 	IsResave            *bool                        `json:"resave"`
-	IsRolling           *bool                        `json:"rolling"`
+	IsRolling           bool                         `json:"rolling"`
 	IsSaveUninitialized *bool                        `json:"saveUninitialized"`
 	UnsetMode           *UnsetModeEnums              `json:"unset"`
 	Secret              *[]string                    `json:"secret"`
@@ -62,51 +78,12 @@ type MiddlewareOptions struct {
 
 // Middleware comment
 type Middleware struct {
-	Cookie              HTTPCookie  `json:"cookie"`
-	Name                string      `json:"name"`
-	Store               interface{} `json:"store"`
-	IsProxy             bool        `json:"proxy"`
-	IsResave            bool        `json:"resave"`
-	IsRolling           bool        `json:"rolling"`
-	IsSaveUninitialized bool        `json:"saveUninitialized"`
-	Secret              []string    `json:"secret"`
-	Router              http.Handler
-	SessionID           string
-	unsetDestroy        bool
-	generateSessionID   FuncIDGenerator
-}
-
-/**
- * Determine if request is secure.
- *
- * @param {Object} req
- * @param {Boolean} [trustProxy]
- * @return {Boolean}
- * @private
- */
-
-func isSecure(r *http.Request, trustProxy bool) bool {
-	//   // socket is https server
-	//   if (r.connection && r.connection.encrypted) {
-	//     return true;
-	//   }
-
-	//   // do not trust proxy
-	//   if (trustProxy === false) {
-	//     return false;
-	//   }
-
-	//   // no explicit trust; try req.secure from express
-	//   if (trustProxy !== true) {
-	//     return req.secure === true
-	//   }
-
-	//   // read the proto from x-forwarded-proto header
-	//   var header = req.headers['x-forwarded-proto'] || '';
-	//   var index = header.indexOf(',');
-	//   var proto = index !== -1
-	//     ? header.substr(0, index).toLowerCase().trim()
-	//     : header.toLowerCase().trim()
-
-	//   return proto === 'https';
+	SessionID    string
+	Store        *interface{ StoreInterface }
+	handler      http.Handler
+	unsetDestroy bool
+	MiddlewareOptions
+	IsResave            bool
+	IsSaveUninitialized bool
+	Secret              []string
 }

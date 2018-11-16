@@ -17,9 +17,17 @@ func main() {
 
 	router := httprouter.New()
 
-	options := session.MiddlewareOptions{}
-	middware := session.NewMiddleware(router, options)
+	options := &session.MiddlewareOptions{
+		IsResave:            session.DISABLE_RESAVE,
+		IsSaveUninitialized: session.DISABLE_SAVE_UNINITIALIZED,
+		Secret:              &[]string{"mysecret"},
+		// Cookie: &session.HTTPCookie{
+		// 	Name:  "jshdkajs",
+		// 	Value: "",
+		// },
+	}
+	middleware, _ := session.NewMiddleware(router, options)
 	// router.GET("/health", core.ReportHealth())
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":18080", middleware))
 }
