@@ -1,6 +1,7 @@
 package session
 
 import (
+	"crypto/rand"
 	"net/http"
 )
 
@@ -11,14 +12,14 @@ import (
  * @return {String}
  * @private
  */
-func generateSessionID() string {
-	// buf := make([]byte, 12)
-	// if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-	// 	log.Fatal(err)
-	// 	return ""
-	// }
-	// return string(buf[:])
-	return ""
+func generateSessionID(size int) (string, error) {
+	size = 10
+	buffer := make([]byte, size)
+	_, err := rand.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	return string(buffer[:]), nil
 }
 
 /**

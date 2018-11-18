@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"log"
 	"net/http"
 )
@@ -63,7 +64,6 @@ func NewMiddleware(handler http.Handler, opts *MiddlewareOptions) (*Middleware, 
 	// get the cookie signing secret
 	var secret []string
 	defaultSecret := []string{"Penn"}
-
 	if opts.Secret == nil {
 		log.Println("req.secret; provide secret option")
 		secret = defaultSecret
@@ -75,6 +75,10 @@ func NewMiddleware(handler http.Handler, opts *MiddlewareOptions) (*Middleware, 
 			secret = *opts.Secret
 		}
 	}
+	// ensure a secret is available or bail
+	if secret == nil || len(secret) == 0 {
+		return nil, errors.New("secret option required for sessions")
+	}
 	mdw.Secret = secret
 
 	var unsetDestroy = false
@@ -82,24 +86,121 @@ func NewMiddleware(handler http.Handler, opts *MiddlewareOptions) (*Middleware, 
 		unsetDestroy = (*opts.UnsetMode == UNSET_DESTROY)
 	}
 	mdw.unsetDestroy = unsetDestroy
+	(*mdw.Store).SetSessionGenerator(GenerateNewSession)
 
 	return mdw, nil
 }
 
-func (ctx *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	(*ctx.Store).SetSession(&Session{
-		ID:      generateSessionID(),
-		Request: r,
-		Cookie: &HTTPCookie{
-			Cookie: http.Cookie{
-				Name:   "asdasd",
-				Value:  generateSessionID(),
-				Path:   "/",
-				Domain: ".claimh.loc",
-				Secure: requestIsSecure(r, ctx.IsTrustProxy),
-			},
-		},
-	})
+var storeReady bool = false
 
-	ctx.handler.ServeHTTP(w, r)
+func (ctx *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer ctx.handler.ServeHTTP(w, r)
+
+	// self-awareness
+	if sessionID := r.Context().Value(REQUEST_CONTEXT_SESSION_ID); sessionID != "" {
+		return
+	}
+
+	// Handle connection as if there is no session if
+	// the store has temporarily disconnected etc
+	if storeReady == false {
+		log.Println("store is disconnected")
+		return
+	}
+
+	// pathname mismatch
+	// var originalPath = parseUrl.original(req).pathname || "/"
+	// if (originalPath.indexOf(cookieOptions.path || '/') !== 0) {
+	// 	return
+	// }
+
+	//   var originalHash;
+	//   var originalId;
+	//   var savedHash;
+	//   var touched = false
+
+	//   // expose store
+	//   req.sessionStore = store;
+
+	//   // get the session ID from the cookie
+	//   var cookieId = req.sessionID = getcookie(req, name, secrets);
+
+	//   // set-cookie
+	//   onHeaders(res, function(){
+	// 	if (!req.session) {
+	// 	  debug('no session');
+	// 	  return;
+	// 	}
+
+	// 	if (!shouldSetCookie(req)) {
+	// 	  return;
+	// 	}
+
+	// 	// only send secure cookies via https
+	// 	if (req.session.cookie.secure && !issecure(req, trustProxy)) {
+	// 	  debug('not secured');
+	// 	  return;
+	// 	}
+
+	// 	if (!touched) {
+	// 	  // touch session
+	// 	  req.session.touch()
+	// 	  touched = true
+	// 	}
+
+	// 	// set cookie
+	// 	setcookie(res, name, req.sessionID, secrets[0], req.session.cookie.data);
+	//   });
+
+	// 	if (shouldDestroy(req)) {
+	// 	  // destroy session
+	// 	  debug('destroying');
+	// 	  store.destroy(req.sessionID, function ondestroy(err) {
+	// 		if (err) {
+	// 		  defer(next, err);
+	// 		}
+
+	// 		debug('destroyed');
+	// 		writeend();
+	// 	  });
+
+	// 	  return writetop();
+	// 	}
+
+	// 	// no session to save
+	// 	if (!req.session) {
+	// 	  debug('no session');
+	// 	  return _end.call(res, chunk, encoding);
+	// 	}
+
+	// 	if (!touched) {
+	// 	  // touch session
+	// 	  req.session.touch()
+	// 	  touched = true
+	// 	}
+
+	// 	if (shouldSave(req)) {
+	// 	  req.session.save(function onsave(err) {
+	// 		if (err) {
+	// 		  defer(next, err);
+	// 		}
+
+	// 		writeend();
+	// 	  });
+
+	// 	  return writetop();
+	// 	} else if (storeImplementsTouch && shouldTouch(req)) {
+	// 	  // store implements touch method
+	// 	  debug('touching');
+	// 	  store.touch(req.sessionID, req.session, function ontouch(err) {
+	// 		if (err) {
+	// 		  defer(next, err);
+	// 		}
+
+	// 		debug('touched');
+	// 		writeend();
+	// 	  });
+
+	// 	  return writetop();
+	// 	}
 }

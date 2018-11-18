@@ -12,6 +12,7 @@ const (
 	UNSET_DESTROY UnsetMode = "destroy"
 )
 
+const REQUEST_CONTEXT_SESSION_ID = "sessionID"
 const DEFAULT_SESSION_NAME string = "gopher.sid"
 
 var DISABLE_RESAVE = flag.Bool("DISABLE_RESAVE", false, "")
@@ -47,6 +48,7 @@ const (
 // 	Unparsed []string // Raw text of unparsed attribute-value pairs
 // }
 
+// HTTPCookie comment
 type HTTPCookie struct {
 	http.Cookie
 	SameSite SameSite
@@ -54,7 +56,7 @@ type HTTPCookie struct {
 
 // StoreInterface comment
 type StoreInterface interface {
-	SetSession(*Session)
+	SetSessionGenerator(func(*http.Request, bool) (*Session, error))
 }
 
 // Store comment
